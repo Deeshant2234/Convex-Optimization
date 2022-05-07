@@ -1,0 +1,63 @@
+import numpy as np
+import cvxpy as cp
+from scipy import signal as sg
+import matplotlib.pyplot as plt
+m=2000
+freq = 2
+amp = 2
+time = np.linspace(0, 2, m)
+time=time.reshape(m,1)
+
+X = amp*np.sin(2*np.pi*freq*time)
+N = np.random.normal(0, .6, X.shape)
+
+X=X.reshape(m,1)
+X_cor = X + N
+X_cor.shape
+plt.plot(time, X)
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.show()
+
+plt.plot(time, X_cor)
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.show()
+X_rec_quad = cp.Variable((m,1))
+deltas = np.logspace(-5,4,10)
+
+residual_Quad = np.array([])
+phi_quad =np.array([])
+
+D = np.zeros([m-1,m])
+i=0
+while i<(m-1):
+  D[i][i] = -1
+  D[i][i+1]= 1
+  i=i+1
+
+def totalCost(res, phi, delta):
+  cost = cp.square(cp.norm(res, 2)) + delta*cp.square(cp.norm(phi, 2))
+  return cost
+
+for delta in deltas:
+  count =0
+  objective = cp.Minimize(totalCost((X_rec_quad-X_cor), cp.matmul(D,X_rec_quad), delta))
+  constraints = []
+  prob = cp.Problem(objective,constraints)
+  prob.solve(solver=cp.CVXOPT)
+ 
+  residual_Quad = np.append(residual_Quad,np.linalg.norm((X_rec_quad.value-X_cor), 2))
+  phi_quad = np.append(phi_quad,np.linalg.norm(np.matmul(D,X_rec_quad.value), 2))
+  
+
+plt.plot(time, X_rec_quad.value)
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.show()
+
+plt.figure()
+plt.plot(residual_Quad, phi_quad)
+plt.xlabel('residual_Quad')
+plt.ylabel('phi_quad')
+plt.show()
